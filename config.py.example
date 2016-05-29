@@ -1,0 +1,61 @@
+# NyaaTorrent server config
+#
+## host
+## URL of the server
+NYAA = {
+        'host': 'http://www.nyaa.se',
+        }
+
+# Thansmission server config
+#
+## host
+## URL of the Transmission server, RPC API
+#
+## ssl_verify
+## to check the SSL certificate of the server
+## default to True
+## it is optionnal
+TRANSMISSION = {
+        'host': 'https://transmission.server/transmission/rpc',
+        # 'ssl_verify': False,
+        }
+
+# loglevel
+LOGS = 'INFO'
+
+# list of series
+#
+## directory
+## local directory of the downloaded files
+#
+## directory_server
+## directory of the dowloaded files as seen by Transmission
+## default to the local directory
+## it is optionnal
+#
+## file_pattern
+## pattern of the name of the file to download
+## the pattern helps to select the right anime from the right team,
+## make it as precise as you can
+## you can tell the place of the episode number by {number}
+## if the file has unpredictible parts for each episode, you can tell such
+## a place by {garbage}
+## {number} and {garbage} are converted to "*" when querrying NyaaTorrent
+##
+## examples:
+## "[BakedFish] Anne Happy♪ - {number} [720p][AAC].mp4",
+## "[DameDesuYo] Koutetsujou no Kabaneri - {number} (1280x720 10bit AAC) [{garbage}].mkv",
+#
+## number_format
+## format of the episode number
+## set to "02" by default, that is two digits at least
+## it uses the Python format mini-language
+## it is optionnal
+SERIES = (
+        {
+            'directory': "/path/to/your/directory",
+            # 'directory_server': "/path/to/the/directory/on/the/server,
+            'file_pattern': "Your anime {number} ({garbage})",
+            # 'number_format': '02',
+            },
+        )
