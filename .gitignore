@@ -62,3 +62,6 @@ docs/_build/
 # Vim
 *.sw[po]
 *.vim
+
+# Config file
+config.py
