@@ -1,9 +1,11 @@
 import requests
 import urllib
 import re
+import html
 
 
 REGEX_TID = r'tid=(\d+)'
+REGEX_NAME = r'<a href=".*?' + REGEX_TID + '">{name}</a>'
 
 
 class NyaaConnector:
@@ -38,9 +40,29 @@ class NyaaConnector:
 
         tid = re.findall(REGEX_TID, request.url)
         if not tid:
+            # try to search in the page recieved
+            result = self.get_id_from_page(
+                    page=request.text,
+                    name=name
+                    )
+
+            # result can be None if there is nothing found
+            return result
+
+        return tid[0]
+
+    def get_id_from_page(self, page, name):
+        """ Get the first torrent ID corresponding to
+            a name on a given page
+        """
+        page = html.unescape(page)
+        regex = re.compile(REGEX_NAME.format(name=re.escape(name).replace('\*', '.*?')))
+        tid = re.findall(regex, page)
+        if not tid:
             return None
 
         return tid[0]
+
 
     def get_url_from_id(self, tid):
         """ Get the torrent URL from the torrent ID
