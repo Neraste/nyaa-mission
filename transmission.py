@@ -23,6 +23,15 @@ class TransmissionConnector:
     """
 
     def __init__(self, host, credentials, ssl_verify = True):
+        """ Constructor
+
+            host
+                address of the Transmission server RTC API
+
+            credentials
+                tuple of basic authentication credentials for Transmission,
+                contains a username and a password
+        """
         self.host = host
         self.token = None
         self.headers = {}
@@ -57,6 +66,12 @@ class TransmissionConnector:
     @token_required
     def add_torrent(self, directory, torrent_url):
         """ Set a torrent in queue
+
+            directory
+                directory of the torrent on the server
+
+            url
+                URL of the torrent
         """
         data = {
                 'method': 'torrent-add',
@@ -119,7 +134,6 @@ class TransmissionConnector:
             return [t['name'] for t in result['arguments']['torrents']]
 
         return None
-
 
 
 class TransmissionConnectorError(Exception):

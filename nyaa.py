@@ -13,6 +13,11 @@ class NyaaConnector:
     """
 
     def __init__(self, host):
+        """ Constructor
+
+            host
+                address of the NyaaTorrent website
+        """
         host_split = urllib.parse.urlsplit(host)
         self.scheme = host_split[0]
         self.host = host_split[1]
@@ -20,6 +25,9 @@ class NyaaConnector:
     def get_id_from_name(self, name):
         """ Get torrent ID from a file name
             Return None if name not found
+
+            name
+                querry string to search
         """
         url = urllib.parse.urlunsplit((
                 self.scheme,
@@ -54,6 +62,14 @@ class NyaaConnector:
     def get_id_from_page(self, page, name):
         """ Get the first torrent ID corresponding to
             a name on a given page
+            used when the the search doesn't lead to a single result,
+            but a results list
+
+            page
+                HTML document, contains a list of results
+
+            name
+                querry string to search
         """
         page = html.unescape(page)
         regex = re.compile(REGEX_NAME.format(name=re.escape(name).replace('\*', '.*?')))
@@ -66,6 +82,9 @@ class NyaaConnector:
 
     def get_url_from_id(self, tid):
         """ Get the torrent URL from the torrent ID
+
+            tid
+                torrent ID for NyaaTorrent
         """
         url = urllib.parse.urlunsplit((
                 self.scheme,

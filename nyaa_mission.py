@@ -30,6 +30,14 @@ class NyaaMission:
     """
 
     def __init__(self, config_path=None, skip_directory_check=False):
+        """ Constructor
+
+            config_path
+                name and path of the config file
+
+            skip_directory_check
+                flag to bypass the scan of local directories
+        """
         # config
         if config_path is None:
             config_path = CONFIG_FILE
@@ -38,7 +46,6 @@ class NyaaMission:
         sys.path.append(config_directory)
         config_name = os.path.splitext(config_file)[0]
         config = importlib.import_module(config_name)
-        
         self.skip_directory_check = skip_directory_check
 
         # logs
@@ -79,13 +86,20 @@ class NyaaMission:
         self.set_nyaa(getattr(config, CONFIG_NYAA))
 
     def set_series(self, config):
-        """ Set series
+        """ Set series from config
+
+            config
+                list of series
         """
         for line in config:
             self.series.append(Series(**line))
 
     def set_transmission(self, config):
-        """ Set Transmission connection
+        """ Set Transmission connection from config
+            and from the user
+
+            config
+                dictionnary of config for the Transmission server
         """
         username = input('Username: ')
         import getpass
@@ -94,7 +108,10 @@ class NyaaMission:
         self.transmission.set_token()
 
     def set_nyaa(self, config):
-        """ Set NyaaTorrent connection
+        """ Set NyaaTorrent connection from config
+
+            config
+                dictionnary of config for NyaaTorrent
         """
         self.nyaa = NyaaConnector(**config)
 
@@ -106,11 +123,11 @@ class NyaaMission:
             series.entries = []
             if not self.skip_directory_check:
                 series.set_entries_from_directory()
-                
+ 
             series.set_entries_from_transmission(torrents)
 
     def update(self):
-        """ Check new series episodes en NyaaTorrent website
+        """ Check new series episodes in NyaaTorrent website
         """
         for series in self.series:
             old_max = series.max_number
@@ -146,10 +163,10 @@ if __name__ == '__main__':
             "--config-file",
             help="set configuration file to use (default: " + CONFIG_FILE + ")"
             )
-            
+
     parser.add_argument(
             "--skip-directory-check",
-            help="don't walk in directories to find downloaded series",
+            help="don't check local directories to find downloaded series",
             action='store_true'
             )
 
