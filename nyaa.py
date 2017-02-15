@@ -30,13 +30,14 @@ class NyaaConnector:
             name
                 querry string to search
         """
+        name_term = name.format(garbage='*', variation='').encode('ascii', errors='ignore')
         url = urllib.parse.urlunsplit((
                 self.scheme,
                 self.host,
                 '',
                 urllib.parse.urlencode({
                     'page': 'search',
-                    'term': name.encode('ascii', errors='ignore'),
+                    'term': name_term,
                     }),
                 '',
                 ))
@@ -77,7 +78,12 @@ class NyaaConnector:
                 querry string to search
         """
         page = html.unescape(page)
-        regex = re.compile(REGEX_NAME.format(name=re.escape(name).replace('\*', '.*?')))
+        name_reg = re.escape(name)\
+                .replace('\\{variation\\}', '(?:v\d+)?')\
+                .replace('\\{garbage\\}', '.*?')
+
+        logging.debug("Searching ID in page from name: " + str(name_reg))
+        regex = re.compile(REGEX_NAME.format(name=name_reg))
         tid = re.findall(regex, page)
         if not tid:
             logging.debug("No ID found")

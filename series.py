@@ -38,9 +38,13 @@ class Series:
         else:
             self.directory_server = directory_server
 
-        self.file_pattern = file_pattern
+        self.file_pattern = file_pattern.format(
+                number='{number}{variation}',
+                garbage='{garbage}'
+                )
+
         self.file_pattern_format = file_pattern.format(
-                number='{number:' + number_format + 'n}',
+                number='{number:' + number_format + 'n}{variation}',
                 garbage='{garbage}'
                 )
 
@@ -69,7 +73,8 @@ class Series:
 
         pattern_safe = pattern.replace('[', '[[]').format(
                 number='*',
-                garbage='*'
+                garbage='*',
+                variation='*'
                 )
 
         files = glob.glob(pattern_safe)
@@ -77,16 +82,14 @@ class Series:
         if not files:
             return
 
-        regex_number = r'(\d+)(v\d)?'.join([r'.*?'.join([re.escape(q) \
-                for q in p.split('{garbage}')]) \
-                for p in pattern.format(
-                    number='{number}',
-                    garbage='{garbage}'
-                    ).split('{number}')
-                ])
+        regex_number = re.escape(pattern)\
+                .replace('\\{number\\}', '(\d+)')\
+                .replace('\\{garbage\\}', '.*?')\
+                .replace('\\{variation\\}', '(?:v\d+)?')
 
         for file_path in files:
-            number = int(re.findall(regex_number, file_path)[0][0])
+            number = int(re.findall(regex_number, file_path)[0])
+
             new_entry = SeriesEntry(
                 number=number,
                 file_name=os.path.basename(file_path),
@@ -106,19 +109,16 @@ class Series:
         if not torrents:
             return
 
-        regex_number = r'(\d+)(v\d)?'.join([r'.*?'.join([re.escape(q) \
-                for q in p.split('{garbage}')]) \
-                for p in self.file_pattern.format(
-                    number='{number}',
-                    garbage='{garbage}'
-                    ).split('{number}')
-                ])
+        regex_number = re.escape(self.file_pattern)\
+                .replace('\\{number\\}', '(\d+)')\
+                .replace('\\{garbage\\}', '.*?')\
+                .replace('\\{variation\\}', '(?:v\d+)?')
 
         for torrent in torrents:
             try:
                 # many torrents don't correspond to the ones of the series
                 # we need a simple way to pass them
-                number = int(re.findall(regex_number, torrent)[0][0])
+                number = int(re.findall(regex_number, torrent)[0])
 
             except IndexError:
                 continue
@@ -140,9 +140,23 @@ class Series:
                 connector for the NyaaTorrent website
         """
         old_max_number = self.max_number
-        for i in range(self.max_ahead):
+        i = 0
+        condition_fun = (
+                # always loop if max_ahead is null or negative
+                lambda i: True
+                ) if self.max_ahead <= 0 else (
+                        # loop up to max_ahead otherwize
+                        lambda i: i < self.max_ahead
+                        )
+
+        while condition_fun(i):
             number = old_max_number + i + 1
-            name = self.file_pattern_format.format(number=number, garbage='*')
+            name = self.file_pattern_format.format(
+                    number=number,
+                    variation='{variation}',
+                    garbage='{garbage}'
+                    )
+
             tid = nyaa_connector.get_id_from_name(name)
             if not tid:
                 return # if the nth entry doesn't exist, no reason for the n+1th to exist
@@ -154,6 +168,9 @@ class Series:
                 # this entry is neither dowloaded, nor downloading,
                 # so as to be send to Transmission by download_new_entries
                 ))
+
+            # update iterator
+            i += 1
 
     def download_new_entries(self, nyaa_connector, transmission_connector):
         """ Ask the Transmission server to start download the new entries,
