@@ -2,6 +2,7 @@ import requests
 import urllib
 import re
 import html
+import logging
 
 
 REGEX_TID = r'tid=(\d+)'
@@ -40,6 +41,7 @@ class NyaaConnector:
                 '',
                 ))
 
+        logging.debug("Requesting ID from name: " + str(name_term))
         request = requests.get(url)
         if not request.ok:
             raise NyaaConnectorError(
@@ -48,6 +50,8 @@ class NyaaConnector:
 
         tid = re.findall(REGEX_TID, request.url)
         if not tid:
+            logging.debug("Request has responded no ID")
+
             # try to search in the page recieved
             result = self.get_id_from_page(
                     page=request.text,
@@ -57,6 +61,7 @@ class NyaaConnector:
             # result can be None if there is nothing found
             return result
 
+        logging.debug("Request has responded ID" + str(tid[0]))
         return tid[0]
 
     def get_id_from_page(self, page, name):
@@ -75,8 +80,10 @@ class NyaaConnector:
         regex = re.compile(REGEX_NAME.format(name=re.escape(name).replace('\*', '.*?')))
         tid = re.findall(regex, page)
         if not tid:
+            logging.debug("No ID found")
             return None
 
+        logging.debug("Found at least one ID: " + str(tid[0]))
         return tid[0]
 
 
