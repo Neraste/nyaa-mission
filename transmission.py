@@ -39,10 +39,18 @@ class TransmissionConnector:
                 contains a username and a password
         """
         self.token = None
-        self.headers = {}
         self.ssl_verify = ssl_verify
         self.host = host
         self.credentials = (login, password)
+
+    @token_required
+    def _get_authentication_header(self):
+        """ Return the authentication token in a header-dictionnary form
+
+            Returns:
+                (dictionnary): Token with proper formatting in header.
+        """
+        return {TOKEN: self.token}
 
     def set_token(self):
         """ Authenticate on server and set token
@@ -62,9 +70,6 @@ class TransmissionConnector:
             token = re.findall(REGEX_TOKEN, request.text)
             if token:
                 self.token = token[0]
-                self.headers = {
-                        TOKEN: self.token,
-                        }
 
                 logger.debug("Conected to Transmission server with token")
                 return
@@ -99,7 +104,7 @@ server: error {}".format(request.status_code))
                 self.host,
                 json=data,
                 auth=self.credentials,
-                headers=self.headers,
+                headers=self._get_authentication_header(),
                 verify=self.ssl_verify
                 )
 
@@ -132,7 +137,7 @@ server: error {}".format(request.status_code))
                 self.host,
                 json=data,
                 auth=self.credentials,
-                headers=self.headers,
+                headers=self._get_authentication_header(),
                 verify=self.ssl_verify
                 )
 
