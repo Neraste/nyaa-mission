@@ -226,7 +226,12 @@ class Series:
             # update iterator
             i += 1
 
-    def download_new_entries(self, nyaa_connector, transmission_connector):
+    def download_new_entries(
+            self,
+            nyaa_connector,
+            transmission_connector,
+            dry_run=False
+            ):
         """ Ask the Transmission server to start download the new entries,
             which are entries neither downloaded nor downloading
 
@@ -238,10 +243,14 @@ class Series:
         """
         for entry in self.entries:
             if not (entry.downloaded or entry.downloading):
-                downloading = transmission_connector.add_torrent(
-                        directory=self.directory_server,
-                        torrent_url=nyaa_connector.get_url_from_id(entry.tid)
-                        )
+                if not dry_run:
+                    downloading = transmission_connector.add_torrent(
+                            directory=self.directory_server,
+                            torrent_url=nyaa_connector.get_url_from_id(entry.tid)
+                            )
+
+                else:
+                    downloading = True
 
                 if downloading:
                     logger.debug("Set entry '{}' to download".format(entry))

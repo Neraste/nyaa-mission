@@ -34,10 +34,13 @@ class NyaaMission:
     """ Class to represent a NyaaMission session
     """
 
-    def __init__(self,
+    def __init__(
+            self,
             config_path=None,
             config_series_path=None,
-            skip_directory_check=False):
+            skip_directory_check=False,
+            dry_run=False
+            ):
         """ Constructor
 
             config_path
@@ -47,6 +50,7 @@ class NyaaMission:
                 flag to bypass the scan of local directories
         """
         self.skip_directory_check = skip_directory_check
+        self.dry_run = dry_run
 
         if config_path is None:
             config_path = CONFIG_FILE
@@ -159,7 +163,7 @@ class NyaaMission:
             series.entries = []
             if not self.skip_directory_check:
                 series.set_entries_from_directory()
- 
+
             series.set_entries_from_transmission(torrents)
 
     def update(self):
@@ -168,7 +172,12 @@ class NyaaMission:
         for series in self.series:
             old_max = series.max_number
             series.set_new_entries_from_nyaa(self.nyaa)
-            series.download_new_entries(self.nyaa, self.transmission)
+            series.download_new_entries(
+                    self.nyaa,
+                    self.transmission,
+                    self.dry_run
+                    )
+
             new_max = series.max_number
             amount = new_max - old_max
             if amount:
@@ -218,6 +227,12 @@ if __name__ == '__main__':
             action='store_true'
             )
 
+    parser.add_argument(
+            "--dry-run",
+            help="do not download any file",
+            action='store_true'
+            )
+
     args = parser.parse_args()
 
     try:
@@ -225,7 +240,8 @@ if __name__ == '__main__':
         nyaa_mission = NyaaMission(
                 config_path=args.config_file,
                 config_series_path=args.series_file,
-                skip_directory_check=args.skip_directory_check
+                skip_directory_check=args.skip_directory_check,
+                dry_run=args.dry_run
                 )
 
         nyaa_mission.refresh()
