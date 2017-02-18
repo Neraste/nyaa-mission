@@ -1,6 +1,11 @@
 import glob
 import os
 import re
+import logging
+
+
+logger = logging.getLogger('series')
+
 
 class Series:
     """ Class to describe a series and the amount of
@@ -55,7 +60,7 @@ class Series:
     @property
     def max_number(self):
         if self.entries:
-            return max([e.number for e in self.entries])
+            return max(e.number for e in self.entries)
 
         return 0
 
@@ -64,7 +69,7 @@ class Series:
         """ Set series entries by walking in the directory for downloaded entries
         """
         if not os.path.isdir(self.directory):
-            raise IOError("Directory not found: " + str(self.directory))
+            raise SeriesError("Directory not found: {}".format(self.directory))
 
         pattern = os.path.join(
                 self.directory,
@@ -80,6 +85,10 @@ class Series:
         files = glob.glob(pattern_safe)
 
         if not files:
+            logger.debug("No files on disk found for '{}'".format(
+                os.path.basename(self.directory)
+                ))
+
             return
 
         regex_number = re.escape(pattern)\
@@ -97,6 +106,10 @@ class Series:
                 )
 
             if new_entry not in self.entries:
+                logger.debug("Found file on disk '{}'".format(
+                    os.path.basename(file_path)
+                    ))
+
                 self.entries.append(new_entry)
 
     def set_entries_from_transmission(self, torrents):
@@ -107,6 +120,7 @@ class Series:
                 the list of all torrents in the server
         """
         if not torrents:
+            logger.debug("No torrents to look in")
             return
 
         regex_number = re.escape(self.file_pattern)\
@@ -130,6 +144,10 @@ class Series:
                 )
 
             if new_entry not in self.entries:
+                logger.debug("Found file on torrents '{}'".format(
+                    os.path.basename(torrent)
+                    ))
+
                 self.entries.append(new_entry)
 
     def set_new_entries_from_nyaa(self, nyaa_connector):
@@ -159,6 +177,10 @@ class Series:
 
             tid = nyaa_connector.get_id_from_name(name)
             if not tid:
+                logger.debug("Finished looking new entries for '{}'".format(
+                    os.path.basename(self.directory)
+                    ))
+
                 return # if the nth entry doesn't exist, no reason for the n+1th to exist
 
             self.entries.append(SeriesEntry(
@@ -166,7 +188,12 @@ class Series:
                 file_name=name,
                 tid=tid
                 # this entry is neither dowloaded, nor downloading,
-                # so as to be send to Transmission by download_new_entries
+                # so it as to be sent to Transmission by download_new_entries
+                ))
+
+            self.debug("Adding new entry {} for '{}'".format(
+                number,
+                self.directory
                 ))
 
             # update iterator
@@ -174,7 +201,7 @@ class Series:
 
     def download_new_entries(self, nyaa_connector, transmission_connector):
         """ Ask the Transmission server to start download the new entries,
-            that is entries which are neither downloaded nor downloading
+            which are entries neither downloaded nor downloading
 
             nyaa_connector
                 connector for the NyaaTorrent website
@@ -190,6 +217,9 @@ class Series:
                         )
 
                 if downloading:
+                    self.logger("Set entry '{}' to download".format(
+                        os.pathe.basename(entry.file_name)
+                        ))
                     entry.downloading = True
 
 
@@ -235,3 +265,8 @@ class SeriesEntry:
         """ Test inequality of two episodes
         """
         return not self.__eq__(other)
+
+
+class SeriesError(Exception):
+    """ Class for errors about series
+    """

@@ -6,9 +6,9 @@ import importlib
 import logging
 import argparse
 import requests
-from series import Series
-from nyaa import NyaaConnector
-from transmission import TransmissionConnector
+from series import Series, SeriesError
+from nyaa import NyaaConnector, NyaaConnectorError
+from transmission import TransmissionConnector, TransmissionConnectorError
 
 
 __VERSION__ = "0.1.0"
@@ -19,6 +19,9 @@ CONFIG_SERIES = 'SERIES'
 CONFIG_TRANSMISSION = 'TRANSMISSION'
 CONFIG_NYAA = 'NYAA'
 CONFIG_LOGS = 'LOGS'
+
+
+logger = logging.getLogger('nyaa_mission')
 
 
 logging.getLogger("requests").setLevel(logging.ERROR)
@@ -49,14 +52,13 @@ class NyaaMission:
         self.skip_directory_check = skip_directory_check
 
         # logs
-        self.logging = logging
         loglevel = getattr(config, CONFIG_LOGS, 'INFO')
         logging_level_numeric = getattr(logging, loglevel.upper(), None)
         if not isinstance(logging_level_numeric, int):
             raise ValueError('Invalid log level: {}'.format(loglevel))
 
-        self.logging.basicConfig(
-                format='[%(asctime)s][%(levelname)s] %(message)s',
+        logging.basicConfig(
+                format='[%(asctime)s][%(levelname)s][%(name)s] %(message)s',
                 level=logging_level_numeric
                 )
 
@@ -101,6 +103,7 @@ class NyaaMission:
             config
                 dictionnary of config for the Transmission server
         """
+        # TODO change that
         username = input('Username: ')
         import getpass
         psd = getpass.getpass()
@@ -137,7 +140,7 @@ class NyaaMission:
             amount = new_max - old_max
             if amount:
                 name = os.path.basename(series.directory)
-                self.logging.info("Update {}: {} new entr{}".format(
+                self.logger.info("Update {}: {} new entr{}".format(
                     name,
                     amount,
                     "ies" if amount > 1 else "y"
@@ -180,15 +183,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
+        logger.info("NyaaMission v" + __VERSION__ + " started")
         nyaa_mission = NyaaMission(args.config_file, skip_directory_check=args.skip_directory_check)
-        nyaa_mission.logging.info("NyaaMission v" + __VERSION__ + " started")
         nyaa_mission.refresh()
         nyaa_mission.update()
-        nyaa_mission.logging.info("Closing")
+        logger.info("Closing")
 
-    except Exception as error:
-        if args.debug:
-            logging.exception("An error has occured")
+    except (SeriesError, TransmissionConnectorError, NyaaConnectorError) as error:
+        logger.critical("An error has occured\n{}".format(error))
 
-        else:
-            logging.critical("An error has occured\n" + str(error))
+    except:
+        logger.exception("An error has occured")

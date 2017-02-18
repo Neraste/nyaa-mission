@@ -9,6 +9,9 @@ REGEX_TID = r'tid=(\d+)'
 REGEX_NAME = r'<a href=".*?' + REGEX_TID + '">{name}</a>'
 
 
+logger = logging.getLogger('nyaa')
+
+
 class NyaaConnector:
     """ Class to describe a connexion with the NyaaTorrent website
     """
@@ -42,16 +45,16 @@ class NyaaConnector:
                 '',
                 ))
 
-        logging.debug("Requesting ID from name: " + str(name_term))
+        logger.debug("Requesting ID from name: {}".format(name_term))
         request = requests.get(url)
         if not request.ok:
             raise NyaaConnectorError(
-                    "Unable to connect to server: error " + str(request.status_code)
+                    "Unable to connect to server: error {}".format(request.status_code)
                     )
 
         tid = re.findall(REGEX_TID, request.url)
         if not tid:
-            logging.debug("Request has responded no ID")
+            logger.debug("Request has responded no ID")
 
             # try to search in the page recieved
             result = self.get_id_from_page(
@@ -62,7 +65,7 @@ class NyaaConnector:
             # result can be None if there is nothing found
             return result
 
-        logging.debug("Request has responded ID" + str(tid[0]))
+        logger.debug("Request has responded one ID: {}".format(tid[0]))
         return tid[0]
 
     def get_id_from_page(self, page, name):
@@ -82,14 +85,14 @@ class NyaaConnector:
                 .replace('\\{variation\\}', '(?:v\d+)?')\
                 .replace('\\{garbage\\}', '.*?')
 
-        logging.debug("Searching ID in page from name: " + str(name_reg))
+        logger.debug("Searching ID in page from name: {}".format(name_reg))
         regex = re.compile(REGEX_NAME.format(name=name_reg))
         tid = re.findall(regex, page)
         if not tid:
-            logging.debug("No ID found")
+            logger.debug("No ID found")
             return None
 
-        logging.debug("Found at least one ID: " + str(tid[0]))
+        logger.debug("Found at least one ID: {}".format(tid[0]))
         return tid[0]
 
 
