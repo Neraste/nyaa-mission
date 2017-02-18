@@ -1,0 +1,26 @@
+[Nyaa]
+# URL to the NyaaTorrent website
+host = http://www.nyaa.se
+
+[Transmission]
+# URL to the Transmission server website
+host = https://example.com/transmission/rpc
+
+# login for authentication
+# if not set, it will be asked at run
+#login = admin
+
+# password for authentication
+# if not set (this is encouraged), it will be asked at run
+#password = password
+
+[Logs]
+# level of verbosity
+level = info
+
+[Directories]
+# dowloaded files as seen by the local computer
+#local = /path/to/torrents
+
+# files as seen by the Transmission server
+#server = /path/to/torrens/on/server

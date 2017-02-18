@@ -1,0 +1,37 @@
+# duplicate sections for each series
+
+[Series name here]
+# pattern of the name of the file to download
+# the pattern helps to select the right anime from the right team,
+# make it as precise as you can (usually, using the file name entirely is fine)
+# you can tell the place of the episode number with {number}
+# if the file has unpredictible parts for each episode, you can tell such
+# places with {garbage}
+# {number} and {garbage} are converted to "*" when querrying NyaaTorrent
+#
+# examples:
+# file_pattern = [BakedFish] Anne Happy♪ - {number} [720p][AAC].mp4
+# file_pattern = [DameDesuYo] Koutetsujou no Kabaneri - {number} (1280x720 10bit AAC) [{garbage}].mkv
+file_pattern = file pattern
+#
+# local directory of the downloaded files
+# default to the series name put in section name
+# optionnal
+#directory_local = Series directory
+#
+# directory of the dowloaded files as seen by Transmission
+# default to the local directory
+# optionnal
+#directory_server = Series directory
+#
+# format of the episode number
+# default to '02', that is two digits at least, filled with 0
+# the 'syntax' comes from the Python format mini-language
+# optionnal
+#number_format = 02
+#
+# amount of episodes to get at once
+# defined to avoid an overload of the connexion
+# default to 5
+# optionnal
+#max_ahead = 5
