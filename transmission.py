@@ -11,37 +11,44 @@ REGEX_TOKEN = r'<code>' + TOKEN + ': (.*?)</code>'
 logger = logging.getLogger('transmission')
 
 
-def token_required(fun):
-    """ Decorator for authentification
-    """
-    def call(self, *args, **kwargs):
-        if self.token is None:
-            message = "No connection established"
-            raise TransmissionConnectorError(message)
-
-        return fun(self, *args, **kwargs)
-
-    return call
-
-
 class TransmissionConnector:
     """ Class to describe a connexion with a Transmission server API
+
+        Attributes:
+            token (str): Authentication token given by the Transmission server
+                for connections.
+            ssl_verify (bool): check the validity of the SSL certificate.
+            host (str): Address of the Transmission server RTC API.
+            credentials (tuple): login and password for authetication on the
+                Transmission server.
+
+        Args:
+            host (str): Address of the Transmission server RTC API.
+            login (str): login for basic authentication for the Transmission
+                server.
+            password (str): password for basic authentication for the
+                Transmission server.
+            ssl_verify (bool): check the validity of the SSL certificate. Set to
+                `True` by default.
     """
 
     def __init__(self, host, login, password, ssl_verify=True):
-        """ Constructor
-
-            host
-                address of the Transmission server RTC API
-
-            credentials
-                tuple of basic authentication credentials for Transmission,
-                contains a username and a password
-        """
         self.token = None
         self.ssl_verify = ssl_verify
         self.host = host
         self.credentials = (login, password)
+
+    def token_required(fun):
+        """ Decorator for authentification
+        """
+        def call(self, *args, **kwargs):
+            if self.token is None:
+                message = "No connection established"
+                raise TransmissionConnectorError(message)
+
+            return fun(self, *args, **kwargs)
+
+        return call
 
     @token_required
     def _get_authentication_header(self):
@@ -86,11 +93,13 @@ server: error {}".format(request.status_code))
     def add_torrent(self, directory, torrent_url):
         """ Set a torrent in queue
 
-            directory
-                directory of the torrent on the server
+            Args:
+                directory (str): Directory of the torrent on the server.
+                url (str): URL of the torrent to add.
 
-            url
-                URL of the torrent
+            Returns:
+                (bool): status of dowload request. `True` if it was successful,
+                `False` otherwize.
         """
         data = {
                 'method': 'torrent-add',
@@ -123,6 +132,10 @@ server: error {}".format(request.status_code))
     @token_required
     def get_all_torrents(self):
         """ Get all torrents currently in queue or finished
+
+            Returns:
+                (list): list of all the torrents in the Transmission server.
+                Returns `None` if the list is empty. Or if something went wrong?
         """
         data = {
                 'method': 'torrent-get',

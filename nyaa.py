@@ -14,14 +14,16 @@ logger = logging.getLogger('nyaa')
 
 class NyaaConnector:
     """ Class to describe a connexion with the NyaaTorrent website
+
+        Attributes:
+            scheme (str): HTTP or HTTPS connection.
+            host (str): the URL to NyaaTorent, without the scheme.
+
+        Args:
+            host (str): Address of the NyaaTorrent website.
     """
 
     def __init__(self, host=None):
-        """ Constructor
-
-            host
-                address of the NyaaTorrent website
-        """
         if host is None:
             raise NyaaConnectorError("Parameter 'host' missing in config file")
 
@@ -30,11 +32,13 @@ class NyaaConnector:
         self.host = host_split[1]
 
     def get_id_from_url(self, name):
-        """ Get torrent ID from a file name
-            Return None if name not found
+        """ Get torrent ID from URL
 
-            name
-                querry string to search
+            Args:
+                name (str): Querry string to search.
+
+            Returns:
+                (str): torrent ID. `None` if the name has not been found.
         """
         name_term = name.format(garbage='*', variation='').encode(
                 'ascii',
@@ -79,16 +83,18 @@ class NyaaConnector:
         return tid[0]
 
     def get_id_from_page(self, page, name):
-        """ Get the first torrent ID corresponding to
-            a name on a given page
-            used when the the search doesn't lead to a single result,
-            but a results list
+        """ Get torrent ID from a result page.
 
-            page
-                HTML document, contains a list of results
+            Looks for the first torrent ID corresponding to the name on a given
+            page used when the the search doesn't lead to a single result, but a
+            candidates list.
 
-            name
-                querry string to search
+            Args:
+                page (str): HTML document, contains a list of results.
+                name (str): Querry string to search.
+
+            Returns:
+                (str): torrent ID. `None` if the name has not been found.
         """
         page = html.unescape(page)
         name_reg = re.escape(name)\
@@ -109,8 +115,11 @@ class NyaaConnector:
     def get_url_from_id(self, tid):
         """ Get the torrent URL from the torrent ID
 
-            tid
-                torrent ID for NyaaTorrent
+            Args:
+                tid (str): Torrent ID for NyaaTorrent.
+
+            Returns:
+                (str): URL of the torrent on the NyaaTorrent website.
         """
         url = urllib.parse.urlunsplit((
                 self.scheme,

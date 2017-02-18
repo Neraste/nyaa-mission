@@ -10,6 +10,44 @@ logger = logging.getLogger('series')
 class Series:
     """ Class to describe a series and the amount of
         entries downloaded so far
+
+        Attributes:
+            name (str): Name of the series.
+            number_format (str): Format string for the number of the series. It
+                is aimed for setting the amount of zeros when querrying files.
+            entries (list): List of series entries. The list is appended by
+                `set_entries_from_directory` and
+                `set_entries_from_transmission`.
+            directory_local (str): Path to the directory of the series in the
+                local disk.
+            directory_server (str): Path to the directory of the series in the
+                Transmission server.
+            file_pattern (str): String pattern representing a series entry file
+                name without number formatting.
+            file_pattern_format (str): String pattern representing a series
+                entry file name with number formatting.
+            max_ahead (int): Amount of files to dowload past the more recent
+                dowloaded.
+            max_number (int): Latest entry number.
+
+        Args:
+            name (str): Name of the series.
+            directory_local (str): Name of the local folder for downloaded
+                files. Set to `name` by default.
+            directory_server (str): Name of the folder for downloading files as
+                seen by the Transmission server. Set to `name` by default.
+            directory_local_prefix (str): Path to prepend to `directory_local`.
+            directory_server_prefix (str): Path to prepend to
+                `directory_server`.
+            pattern (str): Pattern string to query the series, used by glob
+                during the directory scan process and by nyaa when querrying
+                NyaaTorrent server.
+            number_format (str): Format string for the number of the series. It
+                is aimed for setting the amount of zeros when querrying files.
+                Set to 2 by default.
+            max_ahead (str): Amount of series to querry in one run. If set to
+                `all` or a negative number, all series entries will be
+                dowloaded.
     """
 
     def __init__(
@@ -21,26 +59,10 @@ class Series:
             directory_server_prefix='',
             pattern=None,
             number_format='02',
-            max_ahead=5
+            max_ahead='5'
             ):
         """ Constructor
 
-            directory
-                local folder for downloaded files
-
-            pattern
-                pattern string to query the series,
-                used by glob during the directory scan process
-                and by nyaa when querrying NyaaTorrent server
-
-            number_format
-                format string for the number of the series
-
-            directory_server
-                folder for dowloaded files in the server
-
-            max_ahead
-                amount of series to querry
         """
         self.name = name
         self.number_format = number_format
@@ -83,7 +105,12 @@ class Series:
         if max_ahead == 'all':
             max_ahead = -1
 
-        self.max_ahead = int(max_ahead)
+        try:
+            self.max_ahead = int(max_ahead)
+
+        except ValeError as error:
+            raise SeriesError("Parameter 'max_ahead' must represent \
+a digit or 'all'") from error
 
     @property
     def max_number(self):
@@ -140,10 +167,11 @@ class Series:
 
     def set_entries_from_transmission(self, torrents):
         """ Set series entries from the Tranimission server
-            The server has already been asked for the torrent list
 
-            torrents
-                the list of all torrents in the server
+            The server has already been asked for the torrent list.
+
+            Args:
+                torrents (list): The list of all torrents in the server.
         """
         if not torrents:
             logger.debug("No torrents to look in")
@@ -178,11 +206,14 @@ class Series:
                 self.entries.append(new_entry)
 
     def set_new_entries_from_nyaa(self, nyaa_connector):
-        """ Set maximum max_ahead new series entries by asking the
-            NyaaTorrent website
+        """ Query NyaaTorrent to get now series entries
 
-            nyaa_connector
-                connector for the NyaaTorrent website
+            Set maximum `max_ahead` new series entries by asking the NyaaTorrent
+            website.
+
+            Args:
+                nyaa_connector (NyaaConnector): Connector for the NyaaTorrent
+                    website.
         """
         old_max_number = self.max_number
         i = 0
@@ -207,15 +238,17 @@ class Series:
                 logger.debug("Finished looking new entries for \
 '{}'".format(self))
 
-                return # if the nth entry doesn't exist, no reason for the n+1th to exist
+                # if the nth entry doesn't exist, no reason for the n+1th to
+                # exist
+                return
 
             self.entries.append(SeriesEntry(
                 number=number,
                 file_name=name,
                 tid=tid,
                 parent=self
-                # this entry is neither dowloaded, nor downloading,
-                # so it as to be sent to Transmission by download_new_entries
+                # this entry is neither dowloaded, nor downloading, so it as to
+                # be sent to Transmission by download_new_entries
                 ))
 
             logger.debug("Adding new entry {} for '{}'".format(
@@ -232,14 +265,19 @@ class Series:
             transmission_connector,
             dry_run=False
             ):
-        """ Ask the Transmission server to start download the new entries,
-            which are entries neither downloaded nor downloading
+        """ Dowload the new series entries
 
-            nyaa_connector
-                connector for the NyaaTorrent website
+            Ask the Transmission server to start download the new entries, which
+            are entries neither downloaded nor downloading.
 
-            transmission_connector
-                connector for the Transmission website
+            Args:
+                nyaa_connector (NyaaTorrent): Connector for the NyaaTorrent
+                    website.
+                transmission_connector (TransmissionConnector): Connector for
+                    the Transmission server.
+                dry_run (bool): Flag for dry run. If set to `True`, the request
+                    to add torrents to the Transmission server is not sent and
+                    no files are dowloaded. Set to `False` by default.
         """
         for entry in self.entries:
             if not (entry.downloaded or entry.downloading):
@@ -262,6 +300,21 @@ class Series:
 
 class SeriesEntry:
     """ Class to describe a series episode
+
+        Attributes: same as arguments.
+
+        Args:
+            number (int): Number of the episode.
+            file_name (str): Name of the file of the episode.
+            dowloaded (bool): Flag for dowloaded status. If set to `True`, the
+                episode has been dowloaded and is currently in the local
+                directory as well as in the Transmission server torrent list.
+                Set to `False` by default.
+            downloading (bool): Flag for dowloading status. If set to `True`,
+                the episode is currently being dowladed and is currently in the
+                Transmission server torrent list.
+            tid (str): Torrent ID in the NyaaTorrent website.
+            parent (Series): series the episode belongs to.
     """
     def __init__(
             self,
@@ -272,26 +325,7 @@ class SeriesEntry:
             tid='',
             parent=None,
             ):
-        """ Constructor
 
-            number
-                number of the episode
-
-            file_name
-                name of the file of the episode
-
-            dowloaded
-                the episode has been dowloaded
-                and is currently in the local directory
-                as well as in the Transmission server torrent list
-
-            downloading
-                the episode is currently being dowladed
-                and is currently in the Transmission server torrent list
-
-            tid
-                torrent ID for the NyaaTorrent website
-        """
         self.number = number
         self.file_name = file_name
         self.downloaded = downloaded

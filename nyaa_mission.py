@@ -32,8 +32,30 @@ requests.packages.urllib3.disable_warnings()
 
 class NyaaMission:
     """ Class to represent a NyaaMission session
-    """
 
+        Attributes:
+            skip_directory_check (bool): Flag to bypass the scan of local
+                directories.
+            dry_run (bool): Flag to perform a dry run, wher no files will be set
+                for dowloading.
+            directory_local (str): directory of dowloaded files in the local
+                computer.
+            directory_server (str): directory of dowloaded files as seen by the
+                Transmission server. If not defined, it takes the value of
+                `directory_local`.
+            series (list): list of the series to update.
+            transmission (TransmissionConnector): connector to the Transmission
+                server.
+            nyaa (NyaaConnector): connector to the NyaaTorrent website.
+
+        Args:
+            config_path (str): Path to the config file.
+            config_series_path (str): Path to the list of the series.
+            skip_directory_check (bool): Flag to bypass the scan of local
+                directories.
+            dry_run (bool): Flag to perform a dry run, wher no files will be set
+                for dowloading.
+    """
     def __init__(
             self,
             config_path=None,
@@ -41,17 +63,11 @@ class NyaaMission:
             skip_directory_check=False,
             dry_run=False
             ):
-        """ Constructor
 
-            config_path
-                name and path of the config file
-
-            skip_directory_check
-                flag to bypass the scan of local directories
-        """
         self.skip_directory_check = skip_directory_check
         self.dry_run = dry_run
 
+        # manage config files names
         if config_path is None:
             config_path = CONFIG_FILE
 
@@ -106,8 +122,9 @@ class NyaaMission:
     def set_series(self, config):
         """ Set series from config
 
-            config
-                list of series
+            Args:
+                config (configparser.SectionProxy): dictionary of series,
+                    containing their parameters.
         """
         for name, section in config.items():
             if name == 'DEFAULT':
@@ -124,8 +141,9 @@ class NyaaMission:
         """ Set Transmission connection from config
             and from the user
 
-            config
-                dictionnary of config for the Transmission server
+            Args:
+                config (configparser.SectionProxy): Dictionnary of parameters
+                    for the Transmission server.
         """
         if 'login' in config:
             login = config.pop('login')
@@ -150,8 +168,9 @@ class NyaaMission:
     def set_nyaa(self, config):
         """ Set NyaaTorrent connection from config
 
-            config
-                dictionnary of config for NyaaTorrent
+            Args:
+                config (configparser.SectionProxy): Dictionnary of parameters
+                    for connection to the  NyaaTorrent website.
         """
         self.nyaa = NyaaConnector(**config)
 
