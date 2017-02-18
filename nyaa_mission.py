@@ -172,9 +172,8 @@ class NyaaMission:
             new_max = series.max_number
             amount = new_max - old_max
             if amount:
-                name = os.path.basename(series.directory)
-                self.logger.info("Update {}: {} new entr{}".format(
-                    name,
+                logger.info("Update {}: {} new entr{}".format(
+                    series,
                     amount,
                     "ies" if amount > 1 else "y"
                     ))
@@ -201,6 +200,12 @@ if __name__ == '__main__':
             )
 
     parser.add_argument(
+            "-s",
+            "--series-file",
+            help="set series definition file to use (default: " + CONFIG_SERIES_FILE + ")"
+            )
+
+    parser.add_argument(
             "--skip-directory-check",
             help="don't check local directories to find downloaded series",
             action='store_true'
@@ -217,7 +222,12 @@ if __name__ == '__main__':
 
     try:
         logger.info("NyaaMission v" + __VERSION__ + " started")
-        nyaa_mission = NyaaMission(args.config_file, skip_directory_check=args.skip_directory_check)
+        nyaa_mission = NyaaMission(
+                config_path=args.config_file,
+                config_series_path=args.series_file,
+                skip_directory_check=args.skip_directory_check
+                )
+
         nyaa_mission.refresh()
         nyaa_mission.update()
         logger.info("Closing")

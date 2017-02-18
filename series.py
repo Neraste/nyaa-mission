@@ -83,7 +83,7 @@ class Series:
         if max_ahead == 'all':
             max_ahead = -1
 
-        self.max_ahead = max_ahead
+        self.max_ahead = int(max_ahead)
 
     @property
     def max_number(self):
@@ -129,7 +129,8 @@ class Series:
             new_entry = SeriesEntry(
                 number=number,
                 file_name=os.path.basename(file_path),
-                downloaded=True
+                downloaded=True,
+                parent=self
                 )
 
             if new_entry not in self.entries:
@@ -165,7 +166,8 @@ class Series:
             new_entry = SeriesEntry(
                 number=number,
                 file_name=torrent,
-                downloading=True
+                downloading=True,
+                parent=self
                 )
 
             if new_entry not in self.entries:
@@ -210,12 +212,13 @@ class Series:
             self.entries.append(SeriesEntry(
                 number=number,
                 file_name=name,
-                tid=tid
+                tid=tid,
+                parent=self
                 # this entry is neither dowloaded, nor downloading,
                 # so it as to be sent to Transmission by download_new_entries
                 ))
 
-            self.debug("Adding new entry {} for '{}'".format(
+            logger.debug("Adding new entry {} for '{}'".format(
                 number,
                 self
                 ))
@@ -241,7 +244,7 @@ class Series:
                         )
 
                 if downloading:
-                    self.logger("Set entry '{}' to download".format(entry))
+                    logger.debug("Set entry '{}' to download".format(entry))
                     entry.downloading = True
 
     def __str__(self):
@@ -285,6 +288,7 @@ class SeriesEntry:
         self.downloaded = downloaded
         self.downloading = downloading
         self.tid = tid
+        self.parent = parent
 
     def __eq__(self, other):
         """ Test equality of two episodes
