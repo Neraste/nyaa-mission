@@ -28,7 +28,7 @@ class TransmissionConnector:
     """ Class to describe a connexion with a Transmission server API
     """
 
-    def __init__(self, host, credentials, ssl_verify = True):
+    def __init__(self, host, login, password, ssl_verify=True):
         """ Constructor
 
             host
@@ -38,11 +38,11 @@ class TransmissionConnector:
                 tuple of basic authentication credentials for Transmission,
                 contains a username and a password
         """
-        self.host = host
         self.token = None
         self.headers = {}
-        self.credentials = credentials
         self.ssl_verify = ssl_verify
+        self.host = host
+        self.credentials = (login, password)
 
     def set_token(self):
         """ Authenticate on server and set token
@@ -146,8 +146,9 @@ server: error {}".format(request.status_code))
                 and 'torrents' in result['arguments'] \
                 and result['arguments']['torrents']:
 
-            logger.debug("Get list of torrents")
-            return [t['name'] for t in result['arguments']['torrents']]
+            torrents = [t['name'] for t in result['arguments']['torrents']]
+            logger.debug("Get list of {} torrents".format(len(torrents)))
+            return torrents
 
         return None
 

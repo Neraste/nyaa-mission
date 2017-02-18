@@ -12,16 +12,23 @@ class Series:
         entries downloaded so far
     """
 
-    def __init__(self, directory, file_pattern,
-            number_format='02',
+    def __init__(
+            self,
+            name,
+            directory_local=None,
             directory_server=None,
-            max_ahead=5):
+            directory_local_prefix='',
+            directory_server_prefix='',
+            pattern=None,
+            number_format='02',
+            max_ahead=5
+            ):
         """ Constructor
 
             directory
                 local folder for downloaded files
 
-            file_pattern
+            pattern
                 pattern string to query the series,
                 used by glob during the directory scan process
                 and by nyaa when querrying NyaaTorrent server
@@ -35,27 +42,48 @@ class Series:
             max_ahead
                 amount of series to querry
         """
+        self.name = name
+        self.number_format = number_format
 
-        self.directory = directory
+        self.entries = []
+
+        # manage all optionnal arguments
+        # directory on disk
+        if directory_local is None:
+            directory_local = name
+
+        self.directory_local = os.path.join(
+                directory_local_prefix,
+                directory_local
+                )
+
+        # directory on server as seen by Transmission
         if directory_server is None:
-            self.directory_server = directory
+            directory_server = name
 
-        else:
-            self.directory_server = directory_server
+        self.directory_server = os.path.join(
+                directory_server_prefix,
+                directory_server
+                )
 
-        self.file_pattern = file_pattern.format(
+        # file pattern of the series items
+        self.file_pattern = pattern.format(
                 number='{number}{variation}',
                 garbage='{garbage}'
                 )
 
-        self.file_pattern_format = file_pattern.format(
+        # file pattern of the series items with formatted number
+        self.file_pattern_format = pattern.format(
                 number='{number:' + number_format + 'n}{variation}',
                 garbage='{garbage}'
                 )
 
-        self.number_format = number_format
+        # number of files to query
+        # allowing spectial value `all`
+        if max_ahead == 'all':
+            max_ahead = -1
+
         self.max_ahead = max_ahead
-        self.entries = []
 
     @property
     def max_number(self):
@@ -68,11 +96,12 @@ class Series:
     def set_entries_from_directory(self):
         """ Set series entries by walking in the directory for downloaded entries
         """
-        if not os.path.isdir(self.directory):
-            raise SeriesError("Directory not found: {}".format(self.directory))
+        if not os.path.isdir(self.directory_local):
+            raise SeriesError("Directory not found: '{}'".format(
+                self.directory_local))
 
         pattern = os.path.join(
-                self.directory,
+                self.directory_local,
                 self.file_pattern
                 )
 
@@ -85,9 +114,7 @@ class Series:
         files = glob.glob(pattern_safe)
 
         if not files:
-            logger.debug("No files on disk found for '{}'".format(
-                os.path.basename(self.directory)
-                ))
+            logger.debug("No files on disk found for '{}'".format(self))
 
             return
 
@@ -106,9 +133,7 @@ class Series:
                 )
 
             if new_entry not in self.entries:
-                logger.debug("Found file on disk '{}'".format(
-                    os.path.basename(file_path)
-                    ))
+                logger.debug("Found file on disk '{}'".format(file_path))
 
                 self.entries.append(new_entry)
 
@@ -144,7 +169,7 @@ class Series:
                 )
 
             if new_entry not in self.entries:
-                logger.debug("Found file on torrents '{}'".format(
+                logger.debug("Found file on torrents list '{}'".format(
                     os.path.basename(torrent)
                     ))
 
@@ -175,11 +200,10 @@ class Series:
                     garbage='{garbage}'
                     )
 
-            tid = nyaa_connector.get_id_from_name(name)
+            tid = nyaa_connector.get_id_from_url(name)
             if not tid:
-                logger.debug("Finished looking new entries for '{}'".format(
-                    os.path.basename(self.directory)
-                    ))
+                logger.debug("Finished looking new entries for \
+'{}'".format(self))
 
                 return # if the nth entry doesn't exist, no reason for the n+1th to exist
 
@@ -193,7 +217,7 @@ class Series:
 
             self.debug("Adding new entry {} for '{}'".format(
                 number,
-                self.directory
+                self
                 ))
 
             # update iterator
@@ -217,18 +241,25 @@ class Series:
                         )
 
                 if downloading:
-                    self.logger("Set entry '{}' to download".format(
-                        os.pathe.basename(entry.file_name)
-                        ))
+                    self.logger("Set entry '{}' to download".format(entry))
                     entry.downloading = True
+
+    def __str__(self):
+        return self.name
 
 
 class SeriesEntry:
     """ Class to describe a series episode
     """
-
-    def __init__(self, number, file_name,
-            downloaded=False, downloading=False, tid=''):
+    def __init__(
+            self,
+            number,
+            file_name,
+            downloaded=False,
+            downloading=False,
+            tid='',
+            parent=None,
+            ):
         """ Constructor
 
             number
@@ -249,7 +280,6 @@ class SeriesEntry:
             tid
                 torrent ID for the NyaaTorrent website
         """
-
         self.number = number
         self.file_name = file_name
         self.downloaded = downloaded
@@ -265,6 +295,13 @@ class SeriesEntry:
         """ Test inequality of two episodes
         """
         return not self.__eq__(other)
+
+    def __str__(self):
+        if self.parent is not None:
+            return "{} #{}".format(self.parent, self.number)
+
+        else:
+            return "Orphan entry #{}".format(self.number)
 
 
 class SeriesError(Exception):

@@ -16,24 +16,31 @@ class NyaaConnector:
     """ Class to describe a connexion with the NyaaTorrent website
     """
 
-    def __init__(self, host):
+    def __init__(self, host=None):
         """ Constructor
 
             host
                 address of the NyaaTorrent website
         """
+        if host is None:
+            raise NyaaConnectorError("Parameter 'host' missing in config file")
+
         host_split = urllib.parse.urlsplit(host)
         self.scheme = host_split[0]
         self.host = host_split[1]
 
-    def get_id_from_name(self, name):
+    def get_id_from_url(self, name):
         """ Get torrent ID from a file name
             Return None if name not found
 
             name
                 querry string to search
         """
-        name_term = name.format(garbage='*', variation='').encode('ascii', errors='ignore')
+        name_term = name.format(garbage='*', variation='').encode(
+                'ascii',
+                errors='ignore'
+                )
+
         url = urllib.parse.urlunsplit((
                 self.scheme,
                 self.host,
@@ -45,7 +52,10 @@ class NyaaConnector:
                 '',
                 ))
 
-        logger.debug("Requesting ID from name: {}".format(name_term))
+        logger.debug("Requesting ID from name: '{}'".format(
+                    name_term.decode('ascii')
+                    ))
+
         request = requests.get(url)
         if not request.ok:
             raise NyaaConnectorError(
@@ -85,7 +95,7 @@ class NyaaConnector:
                 .replace('\\{variation\\}', '(?:v\d+)?')\
                 .replace('\\{garbage\\}', '.*?')
 
-        logger.debug("Searching ID in page from name: {}".format(name_reg))
+        logger.debug("Searching ID in page from name: '{}'".format(name_reg))
         regex = re.compile(REGEX_NAME.format(name=name_reg))
         tid = re.findall(regex, page)
         if not tid:

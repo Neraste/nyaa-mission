@@ -2,9 +2,10 @@
 
 import sys
 import os
-import importlib
 import logging
 import argparse
+import getpass
+from configparser import ConfigParser
 import requests
 from series import Series, SeriesError
 from nyaa import NyaaConnector, NyaaConnectorError
@@ -14,7 +15,8 @@ from transmission import TransmissionConnector, TransmissionConnectorError
 __VERSION__ = "0.1.0"
 
 
-CONFIG_FILE = 'config.py'
+CONFIG_FILE = 'config.ini'
+CONFIG_SERIES_FILE = 'series.ini'
 CONFIG_SERIES = 'SERIES'
 CONFIG_TRANSMISSION = 'TRANSMISSION'
 CONFIG_NYAA = 'NYAA'
@@ -32,7 +34,10 @@ class NyaaMission:
     """ Class to represent a NyaaMission session
     """
 
-    def __init__(self, config_path=None, skip_directory_check=False):
+    def __init__(self,
+            config_path=None,
+            config_series_path=None,
+            skip_directory_check=False):
         """ Constructor
 
             config_path
@@ -41,18 +46,27 @@ class NyaaMission:
             skip_directory_check
                 flag to bypass the scan of local directories
         """
-        # config
+        self.skip_directory_check = skip_directory_check
+
         if config_path is None:
             config_path = CONFIG_FILE
 
-        config_directory, config_file = os.path.split(config_path)
-        sys.path.append(config_directory)
-        config_name = os.path.splitext(config_file)[0]
-        config = importlib.import_module(config_name)
-        self.skip_directory_check = skip_directory_check
+        if config_series_path is None:
+            config_series_path = CONFIG_SERIES_FILE
+
+        # load config file
+        config = ConfigParser()
+        config.read(config_path)
+
+        # directories
+        self.directory_local = config.get('Directories', 'local',
+                fallback='')
+
+        self.directory_server = config.get('Directories', 'server',
+                fallback=self.directory_local)
 
         # logs
-        loglevel = getattr(config, CONFIG_LOGS, 'INFO')
+        loglevel = config.get('Logs', 'level', fallback='INFO')
         logging_level_numeric = getattr(logging, loglevel.upper(), None)
         if not isinstance(logging_level_numeric, int):
             raise ValueError('Invalid log level: {}'.format(loglevel))
@@ -63,29 +77,27 @@ class NyaaMission:
                 )
 
         # series
-        self.series = []
-        if not hasattr(config, CONFIG_SERIES):
-            raise NyaaMissionConfigError(
-                    "Series configuration is missing in config file"
-                    )
+        series_config = ConfigParser()
+        series_config.read(config_series_path)
 
-        self.set_series(getattr(config, CONFIG_SERIES))
+        self.series = []
+        self.set_series(series_config)
 
         # transmission
-        if not hasattr(config, CONFIG_TRANSMISSION):
+        if "Transmission" not in config:
             raise NyaaMissionConfigError(
                     "Transmission configuration is missing in config file"
                     )
 
-        self.set_transmission(getattr(config, CONFIG_TRANSMISSION))
+        self.set_transmission(config['Transmission'])
 
         # nyaatorrent
-        if not hasattr(config, CONFIG_NYAA):
+        if "Nyaa" not in config:
             raise NyaaMissionConfigError(
                     "NyaaTorrent configuration is missing in config file"
                     )
 
-        self.set_nyaa(getattr(config, CONFIG_NYAA))
+        self.set_nyaa(config['Nyaa'])
 
     def set_series(self, config):
         """ Set series from config
@@ -93,8 +105,16 @@ class NyaaMission:
             config
                 list of series
         """
-        for line in config:
-            self.series.append(Series(**line))
+        for name, section in config.items():
+            if name == 'DEFAULT':
+                continue
+
+            self.series.append(Series(
+                name,
+                directory_local_prefix=self.directory_local,
+                directory_server_prefix=self.directory_server,
+                **section
+                ))
 
     def set_transmission(self, config):
         """ Set Transmission connection from config
@@ -103,11 +123,24 @@ class NyaaMission:
             config
                 dictionnary of config for the Transmission server
         """
-        # TODO change that
-        username = input('Username: ')
-        import getpass
-        psd = getpass.getpass()
-        self.transmission = TransmissionConnector(credentials=(username, psd), **config)
+        if 'login' in config:
+            login = config.pop('login')
+
+        else:
+            login = input('Transmission server login: ')
+
+        if 'password' in config:
+            password = config.pop('password')
+
+        else:
+            password = getpass.getpass()
+
+        self.transmission = TransmissionConnector(
+                login=login,
+                password=password,
+                **config
+                )
+
         self.transmission.set_token()
 
     def set_nyaa(self, config):
